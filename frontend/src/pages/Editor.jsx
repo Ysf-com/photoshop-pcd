@@ -1,6 +1,8 @@
 // src/pages/Editor.jsx
+import * as api from '../api/imageApi';
 import { useState } from "react";
 import Navbar from "../components/Navbar";
+import HistogramChart from '../components/HistogramPanel';
 
 const Editor = () => {
   // --- STATE MANAGEMENT ---
@@ -32,30 +34,38 @@ const Editor = () => {
 
   // --- HANDLERS ---
   const handleImageUpload = (e) => {
-    const file = e.target.files; // Fix Bug: Ambil index file pertama
+    const file = e.target.files[0]; // FIX: tambahkan [0]
     if (file) {
-      setRawFile(file); // Menyimpan file asli komputer untuk payload API Axios
+      setRawFile(file);
       const imageUrl = URL.createObjectURL(file);
 
-      // Inisialisasi simulasi data sebaran piksel v0 dari backend Yusuf
-      const dummyRgb = Array.from({ length: 40 }, () =>
-        Math.floor(Math.random() * 4000),
-      );
-      const dummyGray = Array.from({ length: 40 }, () =>
-        Math.floor(Math.random() * 3000),
-      );
+      // Ambil histogram asli dari backend
+      api.getHistogram(file).then(histData => {
+        setImageHistory([{
+          image: imageUrl,
+          rawFile: file,          // simpan file asli
+          currentBase64: null,    // belum ada hasil proses
+          rgbData: histData ? [...histData.r] : [],
+          grayscaleData: histData ? [...histData.gray] : [],
+        }]);
+      }).catch(() => {
+        setImageHistory([{
+          image: imageUrl,
+          rawFile: file,
+          currentBase64: null,
+          rgbData: [],
+          grayscaleData: [],
+        }]);
+      });
 
-      setImageHistory([
-        { image: imageUrl, rgbData: dummyRgb, grayscaleData: dummyGray },
-      ]);
       setHistoryIndex(0);
       setCnnResultInfo("");
     }
   };
 
   const handleResetImage = () => {
-    if (imageHistory?.image) {
-      setImageHistory([imageHistory]);
+    if (imageHistory[0]?.image) {
+      setImageHistory([imageHistory[0]]);
       setHistoryIndex(0);
       setCnnResultInfo("");
       setBrightness(100);
@@ -69,46 +79,191 @@ const Editor = () => {
     }
   };
 
-  const applyEffect = (effectName) => {
-    if (!imageHistory?.image) return;
+  const applyEffect = async (effectName) => {
+  const currentEntry = imageHistory[historyIndex];
+  if (!currentEntry?.rawFile) return;
 
-    // Aktifkan tirai loading spinner sebelum memproses data
-    setIsLoading(true);
+  setIsLoading(true);
 
-    // Simulasi delay seolah server Python sedang memproses filter OpenCV
-    setTimeout(() => {
-      const currentEntry = imageHistory[historyIndex];
+  try {
+    // Opsi B: kirim base64 kalau sudah ada hasil sebelumnya, 
+    // kalau belum kirim file asli
+    const source = currentEntry.currentBase64 
+      ? currentEntry.currentBase64  // base64 hasil sebelumnya
+      : currentEntry.rawFile;       // file asli pertama kali
+
+    let resultBase64 = null;
+    let cnnResult = "";
+
+    // Mapping effectName ke fungsi API
+    switch (effectName) {
+      // Enhancement
+      case "Brightness & Contrast":
+        resultBase64 = await api.applyBrightnessContrast(source, brightness - 100, contrast / 100);
+        break;
+      case "Histogram Equalization":
+        resultBase64 = await api.applyHistogramEqualization(source);
+        break;
+      case "Sharpening Filter":
+        resultBase64 = await api.applySharpen(source);
+        break;
+      case "Smoothing Blur":
+        resultBase64 = await api.applySmooth(source, 5);
+        break;
+
+      // Color
+      case "Grayscale Conversion":
+        resultBase64 = await api.applyGrayscale(source);
+        break;
+      case "Split Channel Red":
+        resultBase64 = await api.applyChannelSplit(source, "R");
+        break;
+      case "Split Channel Green":
+        resultBase64 = await api.applyChannelSplit(source, "G");
+        break;
+      case "Split Channel Blue":
+        resultBase64 = await api.applyChannelSplit(source, "B");
+        break;
+      case "Hue & Saturation":
+        resultBase64 = await api.applyHueSaturation(source, hueSaturation - 100, hueSaturation - 100);
+        break;
+
+      // Transform
+      case "Rotate":
+        resultBase64 = await api.applyRotate(source, rotateAngle);
+        break;
+      case "Flip Horizontal":
+        resultBase64 = await api.applyFlip(source, 1);
+        break;
+      case "Flip Vertical":
+        resultBase64 = await api.applyFlip(source, 0);
+        break;
+      case "Scaling (Resize)":
+        const origW = 800, origH = 600; // default fallback
+        resultBase64 = await api.applyResize(source,
+          Math.round(origW * resizeScale / 100),
+          Math.round(origH * resizeScale / 100));
+        break;
+      case "Affine Translation":
+        resultBase64 = await api.applyTranslate(source, 50, 50);
+        break;
+
+      // Filter
+      case "Gaussian Blur":
+        resultBase64 = await api.applyGaussianBlur(source, 5);
+        break;
+      case "Median Filter":
+        resultBase64 = await api.applyMedianFilter(source, 5);
+        break;
+      case "Salt & Pepper Noise Removal":
+        resultBase64 = await api.applyNoiseRemoval(source);
+        break;
+
+      // Edge Detection
+      case "Canny Edge":
+        resultBase64 = await api.applyEdgeCanny(source, 100, 200);
+        break;
+      case "Sobel Edge":
+        resultBase64 = await api.applyEdgeSobel(source);
+        break;
+      case "Prewitt Edge":
+        resultBase64 = await api.applyEdgePrewitt(source);
+        break;
+      case "Robert Edge":
+        resultBase64 = await api.applyEdgeRobert(source);
+        break;
+      case "Laplacian Edge":
+        resultBase64 = await api.applyEdgeLaplacian(source);
+        break;
+      case "Laplacian of Gaussian (LoG)":
+        resultBase64 = await api.applyEdgeLoG(source);
+        break;
+
+      // Binary & Morphology
+      case "Binary Thresholding":
+        resultBase64 = await api.applyThreshold(source, thresholdValue);
+        break;
+      case "Erosion Operation":
+        resultBase64 = await api.applyMorphology(source, "erode", 5);
+        break;
+      case "Dilation Operation":
+        resultBase64 = await api.applyMorphology(source, "dilate", 5);
+        break;
+
+      // Segmentation
+      case "Threshold-based Segmentation":
+        resultBase64 = await api.applyThreshold(source, thresholdValue);
+        break;
+      case "Edge-based Segmentation":
+        resultBase64 = await api.applySegmentEdge(source);
+        break;
+      case "Region-based Segmentation":
+        resultBase64 = await api.applySegmentRegion(source);
+        break;
+
+      // Compression
+      case "JPEG Simulation Compression":
+        const compResult = await api.applyJpegQuality(source, compressionQuality);
+        resultBase64 = compResult.image;
+        break;
+
+      // CNN
+      case "CNN Object Recognition":
+        const predictions = await api.runCNNRecognition(currentEntry.rawFile);
+        if (predictions && predictions.length > 0) {
+          cnnResult = `Detected: ${predictions[0].label} (${predictions[0].confidence}%)`;
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    // Update history dengan hasil baru
+    if (resultBase64 || cnnResult) {
+      // Ambil histogram dari hasil gambar baru
+      let newRgbData = [];
+      let newGrayData = [];
+
+      if (resultBase64) {
+        try {
+          // Konversi base64 ke blob untuk getHistogram
+          const byteCharacters = atob(resultBase64);
+          const byteNumbers = Array.from(byteCharacters, c => c.charCodeAt(0));
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'image/png' });
+          const histFile = new File([blob], 'result.png', { type: 'image/png' });
+          const histData = await api.getHistogram(histFile);
+          if (histData) {
+            newRgbData = [...(histData.r || [])];
+            newGrayData = [...(histData.gray || [])];
+          }
+        } catch (_) {}
+      }
+
       const nextHistory = imageHistory.slice(0, historyIndex + 1);
-
-      // Simulasi pergeseran data nilai histogram baru setelah gambar di-filter
-      const newDummyRgb = Array.from({ length: 40 }, () =>
-        Math.floor(Math.random() * 5000),
-      );
-      const newDummyGray = Array.from({ length: 40 }, () =>
-        Math.floor(Math.random() * 4000),
-      );
-
-      // Masukkan objek versi baru (Opsi B: Stacking Effect)
       setImageHistory([
         ...nextHistory,
         {
-          image: currentEntry.image, // Nanti diisi string Base64 kiriman dari backend
-          rgbData: newDummyRgb,
-          grayscaleData: newDummyGray,
-        },
+          image: resultBase64
+            ? `data:image/png;base64,${resultBase64}`
+            : currentEntry.image,
+          rawFile: currentEntry.rawFile,
+          currentBase64: resultBase64 || currentEntry.currentBase64,
+          rgbData: newRgbData,
+          grayscaleData: newGrayData,
+        }
       ]);
       setHistoryIndex(nextHistory.length);
+      setCnnResultInfo(cnnResult);
+    }
 
-      if (effectName.includes("CNN")) {
-        setCnnResultInfo("Detected Object: Human (Confidence: 96.4%)");
-      } else {
-        setCnnResultInfo("");
-      }
+  } catch (err) {
+    alert(`Error: ${err.message}`);
+  }
 
-      // Matikan efek loading
-      setIsLoading(false);
-    }, 1500);
-  };
+  setIsLoading(false);
+};
 
   // Helper pembaca indeks objek versi yang sedang aktif saat ini
   const currentEntry = imageHistory[historyIndex];
@@ -135,7 +290,7 @@ const Editor = () => {
 
           <button
             onClick={handleResetImage}
-            disabled={!imageHistory?.image || isLoading}
+            disabled={!imageHistory[0]?.image || isLoading}
             className="px-4 py-2.5 rounded-xl text-xs font-bold bg-red-950/20 border border-red-900/40 text-red-400 hover:bg-red-950/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             🔄 Reset Gambar
@@ -565,15 +720,15 @@ const Editor = () => {
               GAMBAR ORI (BEFORE)
             </span>
             <div className="w-full aspect-video rounded-2xl border border-gray-800 bg-[#101116] flex flex-col items-center justify-center overflow-hidden relative group">
-              {imageHistory?.image ? (
+              {imageHistory[0]?.image ? (
                 <>
                   <img
-                    src={imageHistory.image}
+                    src={imageHistory[0].image}
                     alt="Original"
                     className="w-full h-full object-contain"
                   />
                   <button
-                    onClick={() => setZoomedImage(imageHistory.image)}
+                    onClick={() => setZoomedImage(imageHistory[0].image)}
                     className="absolute bottom-3 right-3 bg-black/70 hover:bg-black p-2 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     🔍 Perbesar
@@ -624,9 +779,6 @@ const Editor = () => {
                     src={currentImage}
                     alt="Hasil Fitur"
                     className="w-full h-full object-contain"
-                    style={{
-                      filter: `brightness(${brightness}%) contrast(${contrast}%)`,
-                    }}
                   />
                   <button
                     onClick={() => setZoomedImage(currentImage)}
@@ -654,7 +806,13 @@ const Editor = () => {
 
             <button
               disabled={!currentImage || isLoading}
-              onClick={() => alert("Menyimpan file hasil modifikasi...")}
+              onClick={() => {
+                if (!currentEntry?.currentBase64) return;
+                const a = document.createElement('a');
+                a.href = `data:image/png;base64,${currentEntry.currentBase64}`;
+                a.download = 'hasil-edit.png';
+                a.click();
+              }}
               className="px-6 py-2.5 rounded-xl text-sm font-bold border transition-all bg-purple-600 border-purple-500 text-white hover:bg-purple-500 disabled:bg-gray-900 disabled:border-gray-950 disabled:text-gray-700 disabled:cursor-not-allowed"
             >
               📥 Save Image
@@ -686,11 +844,7 @@ const Editor = () => {
                   Original RGB Histogram
                 </span>
                 <div className="flex-grow flex items-center justify-center border-b border-dashed border-gray-900 my-2">
-                  <span className="text-xs text-gray-500 italic">
-                    {imageHistory?.rgbData
-                      ? `[ Array Terisi: ${imageHistory.rgbData.length} Titik Koordinat ]`
-                      : "[ Area Grafik Garis R, G, B Yusuf ]"}
-                  </span>
+                  <HistogramChart data={imageHistory[0]} type="rgb" />
                 </div>
                 <div className="text-[9px] text-gray-600 font-mono flex justify-between">
                   <span>v0 - Source Channel</span>
@@ -703,11 +857,7 @@ const Editor = () => {
                   Original Grayscale Histogram
                 </span>
                 <div className="flex-grow flex items-center justify-center border-b border-dashed border-gray-900 my-2">
-                  <span className="text-xs text-gray-500 italic">
-                    {imageHistory?.grayscaleData
-                      ? `[ Array Terisi: ${imageHistory.grayscaleData.length} Titik Koordinat ]`
-                      : "[ Area Grafik Garis Grayscale ]"}
-                  </span>
+                    <HistogramChart data={imageHistory[0]} type="gray" />
                 </div>
                 <div className="text-[9px] text-gray-600 font-mono flex justify-between">
                   <span>v0 - Grayscale Channel</span>
@@ -736,11 +886,7 @@ const Editor = () => {
                   Processed RGB Histogram
                 </span>
                 <div className="flex-grow flex items-center justify-center border-b border-dashed border-gray-900 my-2">
-                  <span className="text-xs text-purple-400/50 italic">
-                    {currentEntry?.rgbData
-                      ? `[ Array Terisi: ${currentEntry.rgbData.length} Titik Koordinat Baru ]`
-                      : "[ Area Grafik Garis R, G, B Yusuf ]"}
-                  </span>
+                    <HistogramChart data={currentEntry} type="rgb" />
                 </div>
                 <div className="text-[9px] text-purple-600 font-mono flex justify-between">
                   <span>v{historyIndex} - Output Channel</span>
@@ -753,11 +899,7 @@ const Editor = () => {
                   Processed Grayscale Histogram
                 </span>
                 <div className="flex-grow flex items-center justify-center border-b border-dashed border-gray-900 my-2">
-                  <span className="text-xs text-purple-400/50 italic">
-                    {currentEntry?.grayscaleData
-                      ? `[ Array Terisi: ${currentEntry.grayscaleData.length} Titik Koordinat Baru ]`
-                      : "[ Area Grafik Garis Luminositas ]"}
-                  </span>
+                  <HistogramChart data={currentEntry} type="gray" />
                 </div>
                 <div className="text-[9px] text-purple-600 font-mono flex justify-between">
                   <span>v{historyIndex} - Grayscale Channel</span>
