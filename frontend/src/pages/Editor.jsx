@@ -4,6 +4,19 @@ import { useState } from "react";
 import Navbar from "../components/Navbar";
 import HistogramChart from '../components/HistogramPanel';
 
+function createHistogramEntry(overrides = {}) {
+  return {
+    image: null,
+    rawFile: null,
+    currentBase64: null,
+    r: [],
+    g: [],
+    b: [],
+    gray: [],
+    ...overrides,
+  };
+}
+
 const Editor = () => {
   // --- STATE MANAGEMENT ---
   const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -14,9 +27,7 @@ const Editor = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Struktur Objek Riwayat Versi Baru untuk Sinkronisasi Histogram (Task #4)
-  const [imageHistory, setImageHistory] = useState([
-    { image: null, rgbData: null, grayscaleData: null },
-  ]);
+  const [imageHistory, setImageHistory] = useState([createHistogramEntry()]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [zoomedImage, setZoomedImage] = useState(null);
 
@@ -41,21 +52,21 @@ const Editor = () => {
 
       // Ambil histogram asli dari backend
       api.getHistogram(file).then(histData => {
-        setImageHistory([{
+        setImageHistory([createHistogramEntry({
           image: imageUrl,
           rawFile: file,          // simpan file asli
           currentBase64: null,    // belum ada hasil proses
-          rgbData: histData ? [...histData.r] : [],
-          grayscaleData: histData ? [...histData.gray] : [],
-        }]);
+          r: histData?.r ?? [],
+          g: histData?.g ?? [],
+          b: histData?.b ?? [],
+          gray: histData?.gray ?? [],
+        })]);
       }).catch(() => {
-        setImageHistory([{
+        setImageHistory([createHistogramEntry({
           image: imageUrl,
           rawFile: file,
           currentBase64: null,
-          rgbData: [],
-          grayscaleData: [],
-        }]);
+        })]);
       });
 
       setHistoryIndex(0);
@@ -222,8 +233,7 @@ const Editor = () => {
     // Update history dengan hasil baru
     if (resultBase64 || cnnResult) {
       // Ambil histogram dari hasil gambar baru
-      let newRgbData = [];
-      let newGrayData = [];
+      let nextHistogram = {};
 
       if (resultBase64) {
         try {
@@ -235,8 +245,12 @@ const Editor = () => {
           const histFile = new File([blob], 'result.png', { type: 'image/png' });
           const histData = await api.getHistogram(histFile);
           if (histData) {
-            newRgbData = [...(histData.r || [])];
-            newGrayData = [...(histData.gray || [])];
+            nextHistogram = {
+              r: histData.r ?? [],
+              g: histData.g ?? [],
+              b: histData.b ?? [],
+              gray: histData.gray ?? [],
+            };
           }
         } catch (_) {}
       }
@@ -244,15 +258,14 @@ const Editor = () => {
       const nextHistory = imageHistory.slice(0, historyIndex + 1);
       setImageHistory([
         ...nextHistory,
-        {
+        createHistogramEntry({
           image: resultBase64
             ? `data:image/png;base64,${resultBase64}`
             : currentEntry.image,
           rawFile: currentEntry.rawFile,
           currentBase64: resultBase64 || currentEntry.currentBase64,
-          rgbData: newRgbData,
-          grayscaleData: newGrayData,
-        }
+          ...nextHistogram,
+        })
       ]);
       setHistoryIndex(nextHistory.length);
       setCnnResultInfo(cnnResult);

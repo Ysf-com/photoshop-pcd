@@ -1,7 +1,11 @@
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function HistogramChart({ data, type = "rgb" }) {
-  if (!data) return (
+  const hasHistogramData = type === "rgb"
+    ? Boolean(data?.r?.length || data?.g?.length || data?.b?.length)
+    : Boolean(data?.gray?.length);
+
+  if (!hasHistogramData) return (
     <div className="flex items-center justify-center h-full text-gray-600 text-xs italic">
       [ Belum ada data histogram ]
     </div>
@@ -31,6 +35,8 @@ export default function HistogramChart({ data, type = "rgb" }) {
         <YAxis tick={{ fontSize: 8, fill: '#6b7280' }} />
         <Tooltip
           contentStyle={{ backgroundColor: '#101116', border: '1px solid #374151', fontSize: 10 }}
+          labelStyle={{ color: '#f3f4f6' }}
+          itemStyle={{ color: '#f3f4f6' }}
           labelFormatter={(v) => `Intensity: ${v}`}
         />
         {type === "rgb" ? (
