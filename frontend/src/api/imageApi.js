@@ -211,39 +211,4 @@ export async function runCNNRecognition(file) {
   }
   return res.data.predictions;
 }
-
-// ─── Newly Added PCD API Methods ───────────────────
-export async function applyInvert(file) {
-  const res = await axios.post(`${BASE_URL}/color/invert`, buildForm(file));
-  return res.data.image;
-}
-
-export async function applySepia(file) {
-  const res = await axios.post(`${BASE_URL}/color/sepia`, buildForm(file));
-  return res.data.image;
-}
-
-export async function applyGamma(file, gamma) {
-  const res = await axios.post(`${BASE_URL}/enhance/gamma`, buildForm(file, { gamma }));
-  return res.data.image;
-}
-
-export async function applyHistogramStretch(file) {
-  const res = await axios.post(`${BASE_URL}/histogram/stretch`, buildForm(file));
-  return res.data.image;
-}
-
-export async function applyHistogramSpecify(file, targetDist) {
-  const res = await axios.post(`${BASE_URL}/histogram/specify`, buildForm(file, { target_dist: targetDist }));
-  return res.data.image;
-}
-
-export async function applyMeanBlur(file, kernelSize) {
-  const res = await axios.post(`${BASE_URL}/filter/mean-blur`, buildForm(file, { kernel_size: kernelSize }));
-  return res.data.image;
-}
-
-export async function applySkeleton(file) {
-  const res = await axios.post(`${BASE_URL}/segment/skeleton`, buildForm(file));
-  return res.data.image;
-}
+

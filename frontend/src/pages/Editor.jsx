@@ -98,9 +98,6 @@ const Editor = () => {
   const [isSimulatingCompression, setIsSimulatingCompression] = useState(false);
 
   // PCD Checklist additional states
-  const [gamma, setGamma] = useState(1.0);
-  const [targetDist, setTargetDist] = useState("normal");
-  const [meanKernelSize, setMeanKernelSize] = useState(5);
   const [morphologyOperation, setMorphologyOperation] = useState("erode");
   const [morphologyKernelSize, setMorphologyKernelSize] = useState(5);
   const [zoomScale, setZoomScale] = useState(1.0);
@@ -320,21 +317,7 @@ const Editor = () => {
       case "Grayscale Conversion":
         resultBase64 = await api.applyGrayscale(source);
         break;
-      case "Invert Conversion":
-        resultBase64 = await api.applyInvert(source);
-        break;
-      case "Sepia Conversion":
-        resultBase64 = await api.applySepia(source);
-        break;
-      case "Gamma Correction":
-        resultBase64 = await api.applyGamma(source, gamma);
-        break;
-      case "Histogram Stretching":
-        resultBase64 = await api.applyHistogramStretch(source);
-        break;
-      case "Histogram Specification":
-        resultBase64 = await api.applyHistogramSpecify(source, targetDist);
-        break;
+
       case "Split Channel Red":
         resultBase64 = await api.applyChannelSplit(source, "R");
         break;
@@ -382,9 +365,7 @@ const Editor = () => {
       case "Gaussian Blur":
         resultBase64 = await api.applyGaussianBlur(source, 5);
         break;
-      case "Mean Blur Filter":
-        resultBase64 = await api.applyMeanBlur(source, meanKernelSize);
-        break;
+
       case "Median Filter":
         resultBase64 = await api.applyMedianFilter(source, 5);
         break;
@@ -425,9 +406,7 @@ const Editor = () => {
       case "Morphology Custom Operation":
         resultBase64 = await api.applyMorphology(source, morphologyOperation, morphologyKernelSize);
         break;
-      case "Skeletonization Operation":
-        resultBase64 = await api.applySkeleton(source);
-        break;
+
 
       // Segmentation
       case "Threshold-based Segmentation":
@@ -713,75 +692,7 @@ const Editor = () => {
                 >
                   📊 Histogram Equalization
                 </button>
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <button
-                    onClick={() => applyEffect("Invert Conversion")}
-                    disabled={isLoading}
-                    className="p-2.5 rounded-xl bg-[var(--text-primary)]/5 border border-[var(--border-primary)] hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 text-xs font-semibold block disabled:opacity-40 cursor-pointer text-center transition-colors"
-                  >
-                    🌓 Invert (Negatif)
-                  </button>
-                  <button
-                    onClick={() => applyEffect("Sepia Conversion")}
-                    disabled={isLoading}
-                    className="p-2.5 rounded-xl bg-[var(--text-primary)]/5 border border-[var(--border-primary)] hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 text-xs font-semibold block disabled:opacity-40 cursor-pointer text-center transition-colors"
-                  >
-                    🟤 Sepia Tone
-                  </button>
-                </div>
-                <div className="space-y-2.5 mb-4">
-                  <label className="text-xs font-semibold text-[var(--text-secondary)] flex justify-between">
-                    <span>Gamma Correction</span>
-                    <span>{gamma}</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="3.0"
-                    step="0.1"
-                    value={gamma}
-                    onChange={(e) => setGamma(Number(e.target.value))}
-                    disabled={isLoading}
-                    className="w-full accent-[var(--accent)]"
-                  />
-                  <button
-                    onClick={() => applyEffect("Gamma Correction")}
-                    disabled={isLoading || !imageHistory[0]?.image}
-                    className="w-full py-2.5 px-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
-                  >
-                    🔆 Apply Gamma Correction
-                  </button>
-                </div>
-                <button
-                  onClick={() => applyEffect("Histogram Stretching")}
-                  disabled={isLoading}
-                  className="w-full text-left p-2.5 rounded-xl bg-[var(--text-primary)]/5 border border-[var(--border-primary)] hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 text-xs font-semibold block disabled:opacity-40 cursor-pointer transition-colors mb-4"
-                >
-                  📈 Histogram Stretching (Contrast Stretch)
-                </button>
-                <div className="space-y-2.5 mb-4">
-                  <label className="text-xs font-semibold text-[var(--text-secondary)] block mb-1">
-                    Histogram Specification (Matching)
-                  </label>
-                  <select
-                    value={targetDist}
-                    onChange={(e) => setTargetDist(e.target.value)}
-                    disabled={isLoading}
-                    className="w-full bg-[var(--input-bg)] border border-[var(--border-primary)] rounded-lg p-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] mb-2"
-                  >
-                    <option value="normal">Gaussian (Normal Curve)</option>
-                    <option value="uniform">Uniform (Flat)</option>
-                    <option value="dark">Dark-skewed (Low key)</option>
-                    <option value="bright">Bright-skewed (High key)</option>
-                  </select>
-                  <button
-                    onClick={() => applyEffect("Histogram Specification")}
-                    disabled={isLoading || !imageHistory[0]?.image}
-                    className="w-full py-2.5 px-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
-                  >
-                    📊 Apply Histogram Matching
-                  </button>
-                </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => applyEffect("Split Channel Red")}
@@ -1023,29 +934,7 @@ const Editor = () => {
                 >
                   💧 Smoothing (Blur)
                 </button>
-                <div className="space-y-2.5 p-3 rounded-xl bg-[var(--text-primary)]/3 border border-[var(--border-primary)]/40">
-                  <label className="text-[10px] font-semibold text-[var(--text-secondary)] flex justify-between">
-                    <span>Mean / Average Blur</span>
-                    <span>Kernel: {meanKernelSize}x{meanKernelSize}</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="3"
-                    max="15"
-                    step="2"
-                    value={meanKernelSize}
-                    onChange={(e) => setMeanKernelSize(Number(e.target.value))}
-                    disabled={isLoading}
-                    className="w-full accent-[var(--accent)]"
-                  />
-                  <button
-                    onClick={() => applyEffect("Mean Blur Filter")}
-                    disabled={isLoading || !imageHistory[0]?.image}
-                    className="w-full py-2 px-3 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white text-[10px] font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm mt-1"
-                  >
-                    Apply Mean Blur
-                  </button>
-                </div>
+
                 <button
                   onClick={() => applyEffect("Gaussian Blur")}
                   disabled={isLoading}
@@ -1206,13 +1095,7 @@ const Editor = () => {
                   </button>
                 </div>
 
-                <button
-                  onClick={() => applyEffect("Skeletonization Operation")}
-                  disabled={isLoading || !imageHistory[0]?.image}
-                  className="w-full text-center py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs block transition-all shadow-sm"
-                >
-                  💀 Apply Skeletonization (Thinning)
-                </button>
+
               </div>
             )}
 
