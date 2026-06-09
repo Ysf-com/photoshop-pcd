@@ -72,6 +72,41 @@ async def morphology(
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
     if operation == "erode":
         result = cv2.erode(img, kernel, iterations=1)
-    else:
+    elif operation == "dilate":
         result = cv2.dilate(img, kernel, iterations=1)
+    elif operation == "open":
+        result = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
+    elif operation == "close":
+        result = cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
+    else:
+        result = img
+    return {"image": encode_image(result)}
+
+@router.post("/skeleton")
+async def skeleton(
+    file: Optional[UploadFile] = File(None),
+    image_base64: Optional[str] = Form(None)
+):
+    file_bytes = await file.read() if file else None
+    img = get_image_from_request(file_bytes, image_base64)
+    
+    # 1. Convert to grayscale and threshold to get binary image
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+    
+    # 2. Iterative skeletonization search loop
+    skel = np.zeros(thresh.shape, np.uint8)
+    element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    
+    # Run morphology thinning iterations
+    for _ in range(100):
+        eroded = cv2.erode(thresh, element)
+        temp = cv2.dilate(eroded, element)
+        temp = cv2.subtract(thresh, temp)
+        skel = cv2.bitwise_or(skel, temp)
+        thresh = eroded.copy()
+        if cv2.countNonZero(thresh) == 0:
+            break
+            
+    result = cv2.cvtColor(skel, cv2.COLOR_GRAY2BGR)
     return {"image": encode_image(result)}

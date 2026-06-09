@@ -5,10 +5,25 @@ const BASE_URL = 'http://localhost:8000';
 // Helper buat FormData dari file atau base64
 function buildForm(fileOrBase64, params = {}) {
   const form = new FormData();
-  if (fileOrBase64 instanceof File) {
-    form.append('file', fileOrBase64);
-  } else {
-    form.append('image_base64', fileOrBase64);
+  if (fileOrBase64 instanceof File || fileOrBase64 instanceof Blob) {
+    form.append('file', fileOrBase64, fileOrBase64.name || 'image.png');
+  } else if (typeof fileOrBase64 === 'string') {
+    let bstr;
+    let mime = 'image/png';
+    if (fileOrBase64.startsWith('data:')) {
+      const arr = fileOrBase64.split(',');
+      mime = arr[0].match(/:(.*?);/)[1];
+      bstr = atob(arr[1]);
+    } else {
+      bstr = atob(fileOrBase64);
+    }
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    const blob = new Blob([u8arr], { type: mime });
+    form.append('file', blob, 'image.png');
   }
   Object.entries(params).forEach(([k, v]) => form.append(k, v));
   return form;
@@ -50,9 +65,9 @@ export async function applyFlip(file, direction) {
   return res.data.image;
 }
 
-export async function applyResize(file, width, height) {
+export async function applyResize(file, width, height, interpolation = "bilinear") {
   const res = await axios.post(`${BASE_URL}/transform/resize`,
-    buildForm(file, { width, height }));
+    buildForm(file, { width, height, interpolation }));
   return res.data.image;
 }
 
@@ -176,6 +191,12 @@ export async function applyJpegQuality(file, quality) {
   return res.data;
 }
 
+export async function simulateCompression(file) {
+  const res = await axios.post(`${BASE_URL}/compress/simulate`, buildForm(file));
+  return res.data;
+}
+
+
 // ─── Histogram ─────────────────────────────────
 export async function getHistogram(file) {
   const res = await axios.post(`${BASE_URL}/histogram/analyze`, buildForm(file));
@@ -185,5 +206,44 @@ export async function getHistogram(file) {
 // ─── CNN ───────────────────────────────────────
 export async function runCNNRecognition(file) {
   const res = await axios.post(`${BASE_URL}/cnn/recognize`, buildForm(file));
+  if (res.data.error) {
+    throw new Error(res.data.error);
+  }
   return res.data.predictions;
+}
+
+// ─── Newly Added PCD API Methods ───────────────────
+export async function applyInvert(file) {
+  const res = await axios.post(`${BASE_URL}/color/invert`, buildForm(file));
+  return res.data.image;
+}
+
+export async function applySepia(file) {
+  const res = await axios.post(`${BASE_URL}/color/sepia`, buildForm(file));
+  return res.data.image;
+}
+
+export async function applyGamma(file, gamma) {
+  const res = await axios.post(`${BASE_URL}/enhance/gamma`, buildForm(file, { gamma }));
+  return res.data.image;
+}
+
+export async function applyHistogramStretch(file) {
+  const res = await axios.post(`${BASE_URL}/histogram/stretch`, buildForm(file));
+  return res.data.image;
+}
+
+export async function applyHistogramSpecify(file, targetDist) {
+  const res = await axios.post(`${BASE_URL}/histogram/specify`, buildForm(file, { target_dist: targetDist }));
+  return res.data.image;
+}
+
+export async function applyMeanBlur(file, kernelSize) {
+  const res = await axios.post(`${BASE_URL}/filter/mean-blur`, buildForm(file, { kernel_size: kernelSize }));
+  return res.data.image;
+}
+
+export async function applySkeleton(file) {
+  const res = await axios.post(`${BASE_URL}/segment/skeleton`, buildForm(file));
+  return res.data.image;
 }

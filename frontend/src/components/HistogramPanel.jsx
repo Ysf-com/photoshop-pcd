@@ -34,9 +34,9 @@ export default function HistogramChart({ data, type = "rgb" }) {
         <XAxis dataKey="x" tick={{ fontSize: 8, fill: '#6b7280' }} interval={63} />
         <YAxis tick={{ fontSize: 8, fill: '#6b7280' }} />
         <Tooltip
-          contentStyle={{ backgroundColor: '#101116', border: '1px solid #374151', fontSize: 10 }}
-          labelStyle={{ color: '#f3f4f6' }}
-          itemStyle={{ color: '#f3f4f6' }}
+          contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '6px', fontSize: 10 }}
+          labelStyle={{ color: 'var(--text-primary)' }}
+          itemStyle={{ color: 'var(--text-secondary)' }}
           labelFormatter={(v) => `Intensity: ${v}`}
         />
         {type === "rgb" ? (

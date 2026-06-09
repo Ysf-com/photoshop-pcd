@@ -6,14 +6,14 @@ import FeaturesSection from "../components/FeaturesSection";
 
 const Home = () => {
   return (
-    <div className="min-h-screen bg-[#08060d]">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300">
       <Navbar />
       <Hero />
       <DashboardPreview />
       <FeaturesSection />
 
       {/* Footer Sederhana */}
-      <footer className="py-20 text-center text-gray-600 text-sm border-top border-gray-900">
+      <footer className="py-20 text-center text-[var(--text-secondary)] text-xs border-t border-[var(--border-primary)] bg-[var(--bg-secondary)]/30">
         &copy; 2026 Editify. Built for Digital Image Processing Project.
       </footer>
     </div>

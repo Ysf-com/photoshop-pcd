@@ -2,22 +2,22 @@
 const features = [
   {
     title: "Enhancement",
-    desc: "Brightness, Contrast, & Histogram Equalization.",
+    desc: "Brightness, Contrast, & Histogram Equalization untuk perbaikan kualitas citra.",
     icon: "✨",
   },
   {
     title: "Geometric",
-    desc: "Rotate, Flip, Crop, & Resize images easily.",
+    desc: "Rotate, Flip, Crop, & Resize gambar tanpa merusak pixel dengan interpolasi.",
     icon: "📐",
   },
   {
     title: "Edge Processing",
-    desc: "Canny, Sobel, & Prewitt edge detection.",
+    desc: "Operator Canny, Sobel, Prewitt, Robert, Laplacian, dan LoG deteksi tepi.",
     icon: "🖼️",
   },
   {
     title: "ML Recognition",
-    desc: "CNN-powered object recognition with PyTorch.",
+    desc: "Pengenalan objek otomatis berbasis Machine Learning (arsitektur CNN).",
     icon: "🧠",
   },
 ];
@@ -29,13 +29,13 @@ const FeaturesSection = () => {
         {features.map((f, i) => (
           <div
             key={i}
-            className="p-8 rounded-2xl bg-[#0f1014] border border-gray-800 hover:border-purple-500/50 transition-colors group"
+            className="p-8 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-primary)] hover:border-[var(--accent)]/50 hover:shadow-lg transition-all duration-300 group"
           >
             <div className="text-3xl mb-4 group-hover:scale-110 transition-transform inline-block">
               {f.icon}
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">{f.title}</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">{f.title}</h3>
+            <p className="text-[var(--text-secondary)] text-xs leading-relaxed font-normal">{f.desc}</p>
           </div>
         ))}
       </div>

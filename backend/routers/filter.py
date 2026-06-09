@@ -131,3 +131,17 @@ async def edge_log(
     result = np.uint8(np.clip(np.abs(log), 0, 255))
     result = cv2.cvtColor(result, cv2.COLOR_GRAY2BGR)
     return {"image": encode_image(result)}
+
+@router.post("/mean-blur")
+async def mean_blur(
+    file: Optional[UploadFile] = File(None),
+    image_base64: Optional[str] = Form(None),
+    kernel_size: int = Form(5)
+):
+    file_bytes = await file.read() if file else None
+    img = get_image_from_request(file_bytes, image_base64)
+    # Mean Blur (Average Box Filter)
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+    result = cv2.blur(img, (kernel_size, kernel_size))
+    return {"image": encode_image(result)}

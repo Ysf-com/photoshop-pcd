@@ -16,8 +16,24 @@ async def rotate(
     img = get_image_from_request(file_bytes, image_base64)
     h, w = img.shape[:2]
     center = (w // 2, h // 2)
+    
+    # Dapatkan matriks rotasi awal
     matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-    result = cv2.warpAffine(img, matrix, (w, h))
+    
+    # Hitung nilai absolut sinus dan kosinus sudut rotasi
+    cos = np.abs(matrix[0, 0])
+    sin = np.abs(matrix[0, 1])
+    
+    # Hitung dimensi baru canvas agar menampung seluruh gambar hasil rotasi
+    nW = int((h * sin) + (w * cos))
+    nH = int((h * cos) + (w * sin))
+    
+    # Sesuaikan pergeseran matriks rotasi agar titik pusat gambar tetap di tengah canvas baru
+    matrix[0, 2] += (nW / 2) - center[0]
+    matrix[1, 2] += (nH / 2) - center[1]
+    
+    # Warp gambar ke canvas baru tanpa memotong bagian gambar
+    result = cv2.warpAffine(img, matrix, (nW, nH))
     return {"image": encode_image(result)}
 
 @router.post("/flip")
@@ -36,11 +52,13 @@ async def resize(
     file: Optional[UploadFile] = File(None),
     image_base64: Optional[str] = Form(None),
     width: int = Form(300),
-    height: int = Form(300)
+    height: int = Form(300),
+    interpolation: str = Form("bilinear")
 ):
     file_bytes = await file.read() if file else None
     img = get_image_from_request(file_bytes, image_base64)
-    result = cv2.resize(img, (width, height), interpolation=cv2.INTER_LINEAR)
+    interp = cv2.INTER_NEAREST if interpolation == "nearest" else cv2.INTER_LINEAR
+    result = cv2.resize(img, (width, height), interpolation=interp)
     return {"image": encode_image(result)}
 
 @router.post("/crop")

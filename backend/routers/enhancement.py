@@ -15,7 +15,8 @@ async def brightness_contrast(
 ):
     file_bytes = await file.read() if file else None
     img = get_image_from_request(file_bytes, image_base64)
-    result = cv2.convertScaleAbs(img, alpha=contrast, beta=brightness)
+    # Gunakan np.clip alih-alih cv2.convertScaleAbs agar penyesuaian kecerahan negatif tidak membalikkan warna
+    result = np.clip(img.astype(np.float32) * contrast + brightness, 0, 255).astype(np.uint8)
     return {"image": encode_image(result)}
 
 @router.post("/histogram-equalization")
@@ -52,4 +53,19 @@ async def smooth(
     if kernel_size % 2 == 0:
         kernel_size += 1
     result = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
+    return {"image": encode_image(result)}
+
+@router.post("/gamma")
+async def gamma_correction(
+    file: Optional[UploadFile] = File(None),
+    image_base64: Optional[str] = Form(None),
+    gamma: float = Form(1.0)
+):
+    file_bytes = await file.read() if file else None
+    img = get_image_from_request(file_bytes, image_base64)
+    # Manual Gamma Correction using OpenCV Look-Up Table (LUT) mapping
+    # V_out = (V_in / 255) ^ (1 / gamma) * 255
+    inv_gamma = 1.0 / gamma
+    table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype(np.uint8)
+    result = cv2.LUT(img, table)
     return {"image": encode_image(result)}
