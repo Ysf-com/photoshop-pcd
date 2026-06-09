@@ -1,3 +1,4 @@
+# CNN Object Recognition using pre-trained MobileNetV2 model
 from fastapi import APIRouter, UploadFile, File
 from utils.image_utils import decode_image
 import cv2
