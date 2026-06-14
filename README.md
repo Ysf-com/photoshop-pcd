@@ -5,7 +5,7 @@ Aplikasi pengolahan citra digital berbasis web sebagai proyek akhir mata kuliah 
 ## 🛠 Tech Stack
 - **Backend:** Python + FastAPI + OpenCV
 - **Frontend:** React + Tailwind CSS
-- **ML:** PyTorch (CNN Object Recognition)
+- **ML:** TensorFlow (CNN Object Recognition)
 
 ## ✨ Fitur
 - Image Enhancement (Brightness, Contrast, Histogram Equalization)
